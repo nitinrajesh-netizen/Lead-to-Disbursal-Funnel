@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control Tower : REFI</title>
+<style>
+:root{--org:#E84118;--dark:#1a1a2e;--bdr:#dde1e7;--bg:#f4f6f9;--wh:#fff;--mut:#636e72;--tx:#2d3436}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--tx);font-size:12.5px}
+
+/* ── LOGIN / LOADING SCREENS ── */
+.screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);z-index:999}
+.lbox{background:var(--wh);border-radius:12px;padding:40px 44px;width:360px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.1);border:1px solid var(--bdr)}
+.llogo{font-size:22px;font-weight:900;color:var(--org);letter-spacing:-0.5px;margin-bottom:4px}
+.ltitle{font-size:14px;font-weight:700;color:var(--dark);margin-bottom:2px}
+.lsub{font-size:10.5px;color:var(--mut);margin-bottom:28px}
+.msibtn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:11px 16px;
+  background:#0078d4;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;
+  cursor:pointer;transition:background .14s}
+.msibtn:hover{background:#106ebe}
+.msibtn:disabled{background:#ccc;cursor:not-allowed}
+.lerr{color:#b71c1c;font-size:11px;margin-top:10px;min-height:16px}
+.lnote{font-size:10px;color:var(--mut);margin-top:14px;background:#f8fafc;padding:8px;border-radius:5px;text-align:left;line-height:1.6}
+.lnote b{color:var(--dark)}
+.spin-box{text-align:center;color:var(--mut);font-size:12px}
+.spinner{width:36px;height:36px;border:3px solid var(--bdr);border-top-color:var(--org);
+  border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 14px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── HEADER ── */
+header{background:var(--wh);border-bottom:3px solid var(--org);padding:9px 20px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:200;box-shadow:0 2px 6px rgba(0,0,0,.07)}
+.htitle{font-size:17px;font-weight:800;color:var(--dark)}
+.hsub{font-size:10px;color:var(--mut);margin-top:1px}
+.live{background:#edf7ee;color:#1b5e20;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;border:1px solid #a5d6a7}
+.hact{display:flex;align-items:center;gap:7px}
+.hbtn{padding:4px 10px;border-radius:5px;font-size:10.5px;font-weight:600;cursor:pointer;border:1px solid var(--bdr);background:var(--wh);color:var(--mut)}
+.hbtn:hover{background:#f0f2f5}
+.husertag{font-size:10px;color:var(--mut);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ── PAGE ── */
+.page{display:flex;min-height:calc(100vh - 54px)}
+.main{flex:1;padding:13px 15px;min-width:0}
+.panel{width:228px;min-width:228px;background:var(--wh);border-left:1px solid var(--bdr);
+  padding:13px 11px;overflow-y:auto;position:sticky;top:54px;height:calc(100vh - 54px)}
+
+/* ── KPI ── */
+.krow{display:flex;gap:9px;margin-bottom:13px;flex-wrap:wrap}
+.kpi{background:var(--wh);border-radius:8px;padding:11px 14px;flex:1;min-width:140px;
+  border:1px solid var(--bdr);box-shadow:0 1px 3px rgba(0,0,0,.05);border-top:3px solid var(--org)}
+.kpi.bl{border-top-color:#2196f3}.kpi.gr{border-top-color:#43a047}.kpi.pu{border-top-color:#8e24aa}
+.kl{font-size:9.5px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.5px}
+.kv{font-size:22px;font-weight:800;color:var(--dark);margin:3px 0 1px;line-height:1}
+.km{font-size:10px;color:var(--mut)}
+
+/* ── CARD ── */
+.card{background:var(--wh);border-radius:8px;border:1px solid var(--bdr);
+  box-shadow:0 1px 3px rgba(0,0,0,.05);margin-bottom:13px;overflow:hidden}
+.chdr{display:flex;align-items:center;justify-content:space-between;
+  padding:8px 13px;background:#fafbfc;border-bottom:1px solid var(--bdr);cursor:pointer}
+.chdr h3{font-size:11.5px;font-weight:700;color:var(--dark);display:flex;align-items:center;gap:6px}
+.bdg{background:var(--org);color:#fff;font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px}
+.caret{color:var(--mut);font-size:10px;transition:transform .18s}
+
+/* ── GRAN BAR ── */
+.gbar{display:flex;align-items:center;gap:8px;padding:8px 13px;
+  border-bottom:1px solid var(--bdr);background:#fafbfc;flex-wrap:wrap}
+.glbl{font-size:9.5px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.5px}
+.tgl{display:flex;border:1px solid var(--bdr);border-radius:5px;overflow:hidden}
+.tb{padding:4px 12px;font-size:11px;font-weight:600;border:none;background:var(--wh);
+  cursor:pointer;color:var(--mut);transition:all .14s}
+.tb.on{background:var(--org);color:#fff}
+#colNote{font-size:10px;color:var(--mut)}
+
+/* ── FILTER NOTE ── */
+.fnote{font-size:10px;color:#e65100;background:#fff8e1;border:1px solid #ffe082;
+  padding:3px 8px;border-radius:4px;margin:0 13px 6px}
+
+/* ── MATRIX ── */
+.mwrap{overflow-x:auto}
+.mtx{width:100%;border-collapse:collapse;font-size:11.5px}
+.mtx th{background:#f0f2f5;padding:6px 9px;text-align:center;font-weight:700;font-size:10px;
+  color:var(--dark);border-bottom:2px solid var(--bdr);white-space:nowrap}
+.mtx th.lh{text-align:left;min-width:185px;width:185px;position:sticky;left:0;z-index:2;background:#f0f2f5}
+.mtx td{padding:4px 9px;border-bottom:1px solid #eef0f3;text-align:center;white-space:nowrap;vertical-align:middle}
+.mtx td.lc{text-align:left;font-weight:600;background:var(--wh);position:sticky;left:0;z-index:1;
+  padding-left:11px;border-right:1px solid var(--bdr)}
+.mtx td.lc.ind{padding-left:22px;font-weight:400;color:var(--mut);font-size:11px}
+.mtx tr:hover td{filter:brightness(.97)}
+.vl{font-weight:700;display:block;line-height:1.3}
+.pl{font-size:10px;opacity:.8;display:block;line-height:1.2}
+.cg{background:#e8f5e9!important;color:#1b5e20!important}
+.cy{background:#fffde7!important;color:#e65100!important}
+.cr{background:#fdecea!important;color:#b71c1c!important}
+
+/* ── FILTER PANEL ── */
+.fsec{margin-bottom:14px}
+.flbl{font-size:9.5px;font-weight:700;color:var(--dark);text-transform:uppercase;
+  letter-spacing:.5px;margin-bottom:5px;display:block}
+.drow{display:flex;flex-direction:column;gap:4px}
+.drow label{font-size:9.5px;color:var(--mut)}
+.drow input[type=date]{width:100%;padding:5px 6px;border:1px solid var(--bdr);
+  border-radius:5px;font-size:11px;color:var(--tx);outline:none}
+.drow input:focus{border-color:var(--org)}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{padding:3px 9px;border-radius:20px;font-size:10.5px;font-weight:600;
+  border:1.5px solid var(--bdr);cursor:pointer;color:var(--mut);background:var(--wh);transition:all .14s}
+.chip.on{border-color:var(--org);color:var(--org);background:#fff5f0}
+
+/* ── MULTISELECT ── */
+.ms{position:relative;width:100%}
+.msb{width:100%;padding:5px 7px;border:1px solid var(--bdr);border-radius:5px;
+  background:var(--wh);display:flex;justify-content:space-between;align-items:center;
+  cursor:pointer;font-size:10.5px;color:var(--tx);gap:4px;text-align:left}
+.msb .lbl{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msb .arr{color:var(--mut);font-size:8px;flex-shrink:0}
+.msdrop{position:absolute;top:calc(100% + 2px);left:0;right:0;background:var(--wh);
+  border:1px solid var(--bdr);border-radius:6px;z-index:500;
+  box-shadow:0 4px 14px rgba(0,0,0,.12);display:none}
+.msdrop.open{display:block}
+.mssearch{width:100%;padding:5px 7px;border:none;border-bottom:1px solid var(--bdr);font-size:10.5px;outline:none}
+.mslist{max-height:140px;overflow-y:auto}
+.msopt{display:flex;align-items:center;gap:5px;padding:4px 7px;cursor:pointer;font-size:10.5px;user-select:none}
+.msopt:hover{background:#f5f6fa}
+.msopt input{cursor:pointer;accent-color:var(--org)}
+.msact{display:flex;gap:3px;padding:4px 7px;border-top:1px solid var(--bdr)}
+.msab{flex:1;padding:2px;font-size:9.5px;cursor:pointer;border:1px solid var(--bdr);border-radius:3px;background:var(--wh);color:var(--mut)}
+
+.abtn{width:100%;padding:7px;background:var(--org);color:#fff;border:none;
+  border-radius:6px;font-size:11.5px;font-weight:700;cursor:pointer;margin-top:2px}
+.abtn:hover{background:#c23010}
+.rbtn{width:100%;padding:5px;background:var(--wh);color:var(--mut);
+  border:1px solid var(--bdr);border-radius:6px;font-size:10.5px;cursor:pointer;margin-top:4px}
+
+/* ── ALERTS ── */
+.alert{display:flex;align-items:flex-start;gap:6px;padding:6px 8px;border-radius:6px;margin-bottom:5px;font-size:10.5px;line-height:1.4}
+.ar{background:#fdecea;border:1px solid #ffcdd2;color:#b71c1c}
+.aa{background:#fff8e1;border:1px solid #ffe082;color:#e65100}
+.ag{background:#e8f5e9;border:1px solid #a5d6a7;color:#1b5e20}
+.ab{background:#e3f2fd;border:1px solid #90caf9;color:#0d47a1}
+.aico{font-size:12px;flex-shrink:0}
+.atitle{font-weight:700;display:block}
+
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:#f0f0f0}
+::-webkit-scrollbar-thumb{background:#ccc;border-radius:2px}
+</style>
+</head>
+<body>
+
+<!-- ════ LOGIN SCREEN ════ -->
+<div id="screenLogin" class="screen">
+  <div class="lbox">
+    <div class="llogo">CARS24</div>
+    <div class="ltitle">Control Tower : REFI</div>
+    <div class="lsub">Lead to Disbursal — Full Funnel Analytics</div>
+    <button class="msibtn" id="btnLogin" onclick="doLogin()">
+      <svg width="18" height="18" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
+      Sign in with Microsoft
+    </button>
+    <div id="loginErr" class="lerr"></div>
+    <div class="lnote">
+      <b>Hosted on GitHub Pages?</b> Just open the URL and sign in.<br>
+      <b>Local:</b> Use VS Code Live Server or <code>python -m http.server 80</code>
+    </div>
+  </div>
+</div>
+
+<!-- ════ LOADING SCREEN ════ -->
+<div id="screenLoading" class="screen" style="display:none">
+  <div class="spin-box">
+    <div class="spinner"></div>
+    <div style="font-weight:600;color:var(--dark);margin-bottom:4px">Fetching data from Power BI...</div>
+    <div id="loadNote" style="font-size:10px;color:var(--mut)">Running live DAX queries</div>
+  </div>
+</div>
+
+<!-- ════ DASHBOARD ════ -->
+<div id="screenDash" style="display:none">
+
+<header>
+  <div>
+    <div class="htitle">Control Tower : REFI</div>
+    <div class="hsub">Lead to Disbursal — Full Funnel Analytics</div>
+  </div>
+  <div class="hact">
+    <span class="live" id="liveTag">&#x25CF; Live</span>
+    <span class="husertag" id="userTag"></span>
+    <span id="lastUpdTag" style="font-size:10px;color:var(--mut)"></span>
+    <button class="hbtn" onclick="doRefresh()">&#x21BB; Refresh</button>
+    <button class="hbtn" onclick="doLogout()">Sign out</button>
+  </div>
+</header>
+
+<div class="page">
+<div class="main">
+  <div class="krow" id="kpiRow"></div>
+  <div class="card">
+    <div class="chdr" onclick="toggleCard('fBody','fCaret')">
+      <h3>Lead to Disbursal Funnel <span class="bdg">FULL FUNNEL</span></h3>
+      <span class="caret" id="fCaret">&#x25BC;</span>
+    </div>
+    <div id="fBody">
+      <div class="gbar">
+        <span class="glbl">View by:</span>
+        <div class="tgl">
+          <button class="tb on" onclick="setGran('month',this)">Monthly</button>
+          <button class="tb" onclick="setGran('week',this)">Weekly</button>
+          <button class="tb" onclick="setGran('day',this)">Daily</button>
+        </div>
+        <span id="colNote"></span>
+      </div>
+      <div id="filterNote"></div>
+      <div class="mwrap"><table class="mtx" id="fTable"></table></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="fsec">
+    <span class="flbl">&#x1F4C5; Date Range</span>
+    <div class="drow">
+      <label>From</label><input type="date" id="fromDate">
+      <label>To</label><input type="date" id="toDate">
+    </div>
+  </div>
+  <div class="fsec">
+    <span class="flbl">&#x1F3F7; Product Type</span>
+    <div class="chips" id="prodChips">
+      <span class="chip on" data-v="ALL">All</span>
+      <span class="chip" data-v="BT">BT</span>
+      <span class="chip" data-v="LAC">LAC</span>
+    </div>
+  </div>
+  <div class="fsec">
+    <span class="flbl">&#x1F4E1; Final Source</span>
+    <div class="ms" id="msSrc">
+      <button class="msb" onclick="toggleMS('msSrcDrop')">
+        <span class="lbl" id="msSrcLbl">All Sources</span><span class="arr">&#x25BC;</span>
+      </button>
+      <div class="msdrop" id="msSrcDrop">
+        <input class="mssearch" placeholder="Search..." oninput="msFilter(this)">
+        <div class="mslist" id="msSrcList"></div>
+        <div class="msact">
+          <button class="msab" onclick="msAll('msSrcList','msSrcLbl','All Sources')">All</button>
+          <button class="msab" onclick="msClear('msSrcList','msSrcLbl','All Sources')">Clear</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="fsec">
+    <span class="flbl">&#x1F517; Sub Source</span>
+    <div class="ms" id="msSub">
+      <button class="msb" onclick="toggleMS('msSubDrop')">
+        <span class="lbl" id="msSubLbl">All Sub Sources</span><span class="arr">&#x25BC;</span>
+      </button>
+      <div class="msdrop" id="msSubDrop">
+        <input class="mssearch" placeholder="Search..." oninput="msFilter(this)">
+        <div class="mslist" id="msSubList"></div>
+        <div class="msact">
+          <button class="msab" onclick="msAll('msSubList','msSubLbl','All Sub Sources')">All</button>
+          <button class="msab" onclick="msClear('msSubList','msSubLbl','All Sub Sources')">Clear</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <button class="abtn" onclick="applyFilters()">&#x2713; Apply Filters</button>
+  <button class="rbtn" onclick="resetFilters()">&#x21BA; Reset</button>
+  <div style="margin-top:16px">
+    <span class="flbl">&#x1F514; Smart Alerts</span>
+    <div id="alertsPanel"></div>
+  </div>
+</div>
+</div><!-- /page -->
+</div><!-- /screenDash -->
+
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"
+  onerror="document.getElementById('loginErr').textContent='Login library failed — check internet and refresh.'">
+</script>
+<script>
+// ════════════════════════════════════════
+//  CONFIG
+// ════════════════════════════════════════
+const CLIENT_ID    = '10d87b05-67d2-4356-89ee-1ac77c859fa4';
+const TENANT_ID    = '83e11b69-5c94-47f4-b8a8-779907582f55';
+const DATASET_ID   = 'c82889d4-5c1e-4f14-b8ce-51d9d9fe837b';
+const API_URL      = `https://api.powerbi.com/v1.0/myorg/datasets/${DATASET_ID}/executeQueries`;
+const PBI_SCOPE    = ['https://analysis.windows.net/powerbi/api/Dataset.Read.All'];
+const REDIRECT_URI = window.location.href.split('?')[0].split('#')[0];
+
+// ════════════════════════════════════════
+//  MSAL  (lazy init)
+// ════════════════════════════════════════
+let msalInstance = null, msalReady = false;
+
+function getMSAL(){
+  if(!window.msal) throw new Error('Login library not loaded — please refresh.');
+  if(!msalInstance){
+    msalInstance = new msal.PublicClientApplication({
+      auth : {clientId:CLIENT_ID, authority:`https://login.microsoftonline.com/${TENANT_ID}`, redirectUri:REDIRECT_URI},
+      cache: {cacheLocation:'sessionStorage', storeAuthStateInCookie:false}
+    });
+  }
+  return msalInstance;
+}
+async function ensureMSAL(){
+  const inst = getMSAL();
+  if(!msalReady){ await inst.initialize(); msalReady = true; }
+  return inst;
+}
+
+// ════════════════════════════════════════
+//  DAX QUERIES
+//  4 queries cover EVERY filter combination:
+//    Q0  Monthly totals              → fast initial load
+//    Q1  Src × SubSrc × Prod × Month → all monthly combos
+//    Q2  Src × SubSrc × Prod × Week  → all weekly combos
+//    Q3  Src × SubSrc × Prod × Day   → all daily combos (90d)
+// ════════════════════════════════════════
+const M  = `"Leads",[Leads],"ExpRC",[Experian_RC],"AssetForm",[Asset Form Completed],"AgeReject",[Age Reject],"Form1",[Form 1 Completed],"Form2",[Form 2 Completed],"OtherRed",[Other Red Channel],"Workable",[Workable Leads],"Logins",[Logins],"Assessed",[Assessed],"Approved",[Approved],"Disbursals",[Disbursals],"DisbAmt",[Disbursal Amount]`;
+const MW = `"Leads",[Leads],"ExpRC",[Experian_RC],"AssetForm",[Asset Form Completed],"Form1",[Form 1 Completed],"Form2",[Form 2 Completed],"Workable",[Workable Leads],"Logins",[Logins],"Assessed",[Assessed],"Approved",[Approved],"Disbursals",[Disbursals],"DisbAmt",[Disbursal Amount]`;
+
+const QUERIES = [
+  /* Q0 */ `EVALUATE SUMMARIZECOLUMNS(DateTable[YearMonthNum],DateTable[MonthName],${M}) ORDER BY DateTable[YearMonthNum] DESC`,
+  /* Q1 */ `EVALUATE SUMMARIZECOLUMNS('Query1'[FINAL_SOURCE],'Query1'[SUB_SOURCE],'Query1'[PRODUCT_TYPE],DateTable[YearMonthNum],DateTable[MonthName],${M}) ORDER BY DateTable[YearMonthNum] DESC`,
+  /* Q2 */ `EVALUATE SUMMARIZECOLUMNS('Query1'[FINAL_SOURCE],'Query1'[SUB_SOURCE],'Query1'[PRODUCT_TYPE],DateTable[Week],${MW}) ORDER BY DateTable[Week] DESC`,
+  /* Q3 */ `EVALUATE TOPN(20000,SUMMARIZECOLUMNS('Query1'[FINAL_SOURCE],'Query1'[SUB_SOURCE],'Query1'[PRODUCT_TYPE],DateTable[Date],${MW}),DateTable[Date],DESC)`,
+];
+
+// ════════════════════════════════════════
+//  DATA ARRAYS
+// ════════════════════════════════════════
+let MONTHLY   = [];   // {key, lbl, ...metrics}                         ← Q0
+let RAW_MONTH = [];   // {src, subsrc, prod, key, lbl, ...metrics}      ← Q1
+let WEEKLY    = [];   // {key, lbl, sd, ...metrics}  (derived from Q2)
+let RAW_WEEK  = [];   // {src, subsrc, prod, weekKey, weekLbl, sd, ...} ← Q2
+let DAILY     = [];   // {lbl, ...metrics}            (derived from Q3)
+let RAW_DAILY = [];   // {src, subsrc, prod, lbl, ...metrics}           ← Q3
+let FINAL_SOURCES = [], SUB_SOURCES = [];
+
+// ════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════
+let gran = 'month', filteredData = [], activeProd = 'ALL';
+
+// ════════════════════════════════════════
+//  FORMATTERS
+// ════════════════════════════════════════
+function fmtN(n){if(n==null||isNaN(n)||n===0)return'—';return Number(n).toLocaleString('en-IN');}
+function fmtP(n){if(n==null||isNaN(n))return'—';return(n*100).toFixed(1)+'%';}
+function fmtA(n){if(!n||isNaN(n))return'—';if(n>=1e7)return'&#8377;'+(n/1e7).toFixed(2)+'Cr';if(n>=1e5)return'&#8377;'+(n/1e5).toFixed(1)+'L';return'&#8377;'+n.toLocaleString('en-IN');}
+
+// ════════════════════════════════════════
+//  CONDITIONAL FORMAT
+// ════════════════════════════════════════
+function cf(vals,i,lb){
+  const v=vals[i]; if(v==null||isNaN(v)||v===0) return '';
+  const cl=vals.filter(x=>x!=null&&!isNaN(x)&&x!==0); if(cl.length<2) return '';
+  const mn=Math.min(...cl),mx=Math.max(...cl); if(mx===mn) return '';
+  const p=(v-mn)/(mx-mn);
+  return lb?(p<=.33?'cg':p<=.67?'cy':'cr'):(p>=.67?'cg':p>=.33?'cy':'cr');
+}
+
+// ════════════════════════════════════════
+//  FUNNEL ROW DEFINITIONS
+// ════════════════════════════════════════
+const ROWS=[
+  {lbl:'Leads',                  get:d=>d.leads,     fmt:fmtN, lb:false},
+  {lbl:'Experian RC',            get:d=>d.expRC,     fmt:fmtN, lb:true,  ind:true, pget:d=>d.leads?d.expRC/d.leads:null,       pfmt:fmtP},
+  {lbl:'Asset Form Completed',   get:d=>d.assetForm, fmt:fmtN, lb:false},
+  {lbl:'Age Reject',             get:d=>d.ageReject, fmt:fmtN, lb:true,  ind:true, pget:d=>d.assetForm?d.ageReject/d.assetForm:null, pfmt:fmtP},
+  {lbl:'Form 1 Completed',       get:d=>d.form1,     fmt:fmtN, lb:false},
+  {lbl:'Form 2 Completed',       get:d=>d.form2,     fmt:fmtN, lb:false, ind:true, pget:d=>d.form1?d.form2/d.form1:null,       pfmt:fmtP},
+  {lbl:'Lead → Form 2 %',   get:d=>d.leads?d.form2/d.leads:null,   fmt:fmtP, lb:false, ind:true},
+  {lbl:'Other Red Channel',      get:d=>d.otherRed,  fmt:fmtN, lb:true,  pget:d=>d.assetForm?d.otherRed/d.assetForm:null, pfmt:fmtP},
+  {lbl:'Workable Leads',         get:d=>d.workable,  fmt:fmtN, lb:false},
+  {lbl:'Logins',                 get:d=>d.logins,    fmt:fmtN, lb:false, ind:true, pget:d=>d.leads?d.logins/d.leads:null,      pfmt:fmtP},
+  {lbl:'Workable → Login %',get:d=>d.workable?d.logins/d.workable:null, fmt:fmtP, lb:false, ind:true},
+  {lbl:'Assessed',               get:d=>d.assessed,  fmt:fmtN, lb:false, ind:true, pget:d=>d.logins?d.assessed/d.logins:null,   pfmt:fmtP},
+  {lbl:'Approved',               get:d=>d.approved,  fmt:fmtN, lb:false, pget:d=>d.assessed?d.approved/d.assessed:null, pfmt:fmtP},
+  {lbl:'Approval → Disb %', get:d=>d.approved?d.disbursals/d.approved:null, fmt:fmtP, lb:false, ind:true},
+  {lbl:'Disbursals',             get:d=>d.disbursals,fmt:fmtN, lb:false},
+  {lbl:'Disbursal Amount',       get:d=>d.disbAmt,   fmt:fmtA, lb:false},
+  {lbl:'Lead → Disb %',     get:d=>d.leads?d.disbursals/d.leads:null, fmt:fmtP, lb:false, ind:true},
+];
+
+// ════════════════════════════════════════
+//  AUTH
+// ════════════════════════════════════════
+async function doLogin(){
+  document.getElementById('loginErr').textContent = '';
+  document.getElementById('btnLogin').disabled = true;
+  document.getElementById('btnLogin').textContent = 'Signing in...';
+  try{
+    const inst   = await ensureMSAL();
+    const result = await inst.loginPopup({scopes:PBI_SCOPE, prompt:'select_account'});
+    setUserTag(result.account);
+    await fetchAndRender();
+  }catch(e){
+    document.getElementById('loginErr').textContent = e.message || 'Login failed';
+    document.getElementById('btnLogin').disabled = false;
+    document.getElementById('btnLogin').innerHTML = '<svg width="18" height="18" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg> Sign in with Microsoft';
+  }
+}
+
+async function getToken(){
+  const inst     = await ensureMSAL();
+  const accounts = inst.getAllAccounts();
+  if(!accounts.length) throw new Error('Not authenticated');
+  try{
+    return (await inst.acquireTokenSilent({scopes:PBI_SCOPE, account:accounts[0]})).accessToken;
+  }catch{
+    return (await inst.acquireTokenPopup({scopes:PBI_SCOPE})).accessToken;
+  }
+}
+
+function doLogout(){
+  try{ getMSAL().logoutPopup().then(()=>showScreen('login')).catch(()=>showScreen('login')); }
+  catch{ showScreen('login'); }
+}
+
+function setUserTag(account){
+  document.getElementById('userTag').textContent = account?.name || account?.username || '';
+}
+
+// ════════════════════════════════════════
+//  POWER BI API
+// ════════════════════════════════════════
+async function runQuery(token, query){
+  const res = await fetch(API_URL,{
+    method :'POST',
+    headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
+    body   :JSON.stringify({queries:[{query}], serializerSettings:{includeNulls:true}})
+  });
+  if(!res.ok){ const txt=await res.text(); throw new Error(`PBI API ${res.status}: ${txt.slice(0,300)}`); }
+  const json = await res.json();
+  if(json.error) throw new Error(json.error.message || JSON.stringify(json.error));
+  return json.results[0];
+}
+
+// ════════════════════════════════════════
+//  FETCH  —  3-phase loading
+//   Phase 1: Q0  (monthly totals)       → show dashboard in ~2s
+//   Phase 2: Q1  (monthly detail)       → all monthly filter combos
+//   Phase 3: Q2+Q3 parallel             → all weekly + daily combos
+// ════════════════════════════════════════
+async function fetchAndRender(){
+  showScreen('loading');
+  MONTHLY=[];RAW_MONTH=[];WEEKLY=[];RAW_WEEK=[];DAILY=[];RAW_DAILY=[];
+  FINAL_SOURCES=[];SUB_SOURCES=[];
+
+  try{
+    const token = await getToken();
+
+    // ── Phase 1 ───────────────────────────────────────────────────
+    setLoadNote('Fetching monthly summary (1/4)...');
+    parseQ0(await runQuery(token, QUERIES[0]));
+    initDashboard();
+    showScreen('dashboard');
+    setLastUpd('Loading filter data in background...');
+
+    // ── Phase 2 + 3  (background, non-blocking) ───────────────────
+    (async()=>{
+      // Step A: Full monthly detail — enables ALL monthly combos + filter dropdowns
+      try{
+        setLastUpd('Loading Source / Sub-Source / Product data (2/4)...');
+        parseQ1raw(await runQuery(token, QUERIES[1]));
+        filteredData=buildData(); renderKPI(); renderFunnel(); renderAlerts();
+      }catch(e){ console.warn('Q1 monthly detail failed:',e.message); }
+
+      // Step B: Weekly + Daily in parallel — enables ALL weekly/daily combos
+      setLastUpd('Loading weekly & daily data (3-4/4)...');
+      const [r2,r3] = await Promise.all([
+        runQuery(token,QUERIES[2]).catch(e=>{console.warn('Q2 weekly:',e.message);return null;}),
+        runQuery(token,QUERIES[3]).catch(e=>{console.warn('Q3 daily:',e.message);return null;}),
+      ]);
+      if(r2) parseQ2raw(r2);
+      if(r3) parseQ3raw(r3);
+      filteredData=buildData(); renderKPI(); renderFunnel(); renderAlerts();
+
+      const t = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+      setLastUpd(`✓ All data ready · ${t}`);
+    })();
+
+  }catch(e){
+    alert('Data fetch failed: '+e.message);
+    showScreen('login');
+  }
+}
+
+async function doRefresh(){
+  try{
+    const inst = await ensureMSAL();
+    if(!inst.getAllAccounts().length){ showScreen('login'); return; }
+    await fetchAndRender();
+  }catch{ showScreen('login'); }
+}
+
+function setLoadNote(msg){ const el=document.getElementById('loadNote'); if(el) el.textContent=msg; }
+function setLastUpd(msg) { const el=document.getElementById('lastUpdTag'); if(el) el.textContent=msg; }
+
+// ════════════════════════════════════════
+//  PARSE HELPERS
+// ════════════════════════════════════════
+function getRows(result){ return result?.tables?.[0]?.rows||[]; }
+
+function gv(r,alias){
+  const v = r[`[${alias}]`] ?? r[alias] ?? null;
+  return v!=null ? Number(v)||0 : 0;
+}
+
+function isoWkStart(yr,wk){
+  const j=new Date(yr,0,4), d=j.getDay()||7;
+  return new Date(new Date(j.getTime()-(d-1)*864e5).getTime()+(wk-1)*7*864e5);
+}
+
+function parseDateStr(d){
+  const dt=new Date(d);
+  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+}
+
+function parseMetrics(r){
+  return{
+    leads:gv(r,'Leads'), expRC:gv(r,'ExpRC'), assetForm:gv(r,'AssetForm'),
+    ageReject:gv(r,'AgeReject'), form1:gv(r,'Form1'), form2:gv(r,'Form2'),
+    otherRed:gv(r,'OtherRed'), workable:gv(r,'Workable'), logins:gv(r,'Logins'),
+    assessed:gv(r,'Assessed'), approved:gv(r,'Approved'),
+    disbursals:gv(r,'Disbursals'), disbAmt:gv(r,'DisbAmt')
+  };
+}
+
+function cKey(r,col){ return r[`DateTable[${col}]`]||r[col]||''; }
+function dKey(r,col){ return r[`Query1[${col}]`]||r[col]||''; }
+
+// ════════════════════════════════════════
+//  PARSE FUNCTIONS (one per query)
+// ════════════════════════════════════════
+
+// Q0 — Monthly totals (no dimensions)
+function parseQ0(result){
+  MONTHLY = getRows(result).map(r=>({
+    key: Number(cKey(r,'YearMonthNum')),
+    lbl: cKey(r,'MonthName'),
+    ...parseMetrics(r)
+  })).filter(r=>r.key>0);
+}
+
+// Q1 — Full monthly detail: Src x SubSrc x Prod x Month
+function parseQ1raw(result){
+  RAW_MONTH = getRows(result).map(r=>({
+    src   : dKey(r,'FINAL_SOURCE'),
+    subsrc: dKey(r,'SUB_SOURCE'),
+    prod  : dKey(r,'PRODUCT_TYPE'),
+    key   : Number(cKey(r,'YearMonthNum')),
+    lbl   : cKey(r,'MonthName'),
+    ...parseMetrics(r)
+  })).filter(r=>r.key>0);
+
+  FINAL_SOURCES = [...new Set(RAW_MONTH.map(r=>r.src   ))].filter(Boolean).sort();
+  SUB_SOURCES   = [...new Set(RAW_MONTH.map(r=>r.subsrc))].filter(Boolean).sort();
+  buildMS('msSrcList', FINAL_SOURCES);
+  buildMS('msSubList', SUB_SOURCES);
+}
+
+// Q2 — Full weekly detail: Src x SubSrc x Prod x Week
+function parseQ2raw(result){
+  RAW_WEEK = getRows(result).map(r=>{
+    const lbl   = r['DateTable[Week]']||r['Week']||'';
+    const parts = lbl.split(' W');
+    const yr=Number(parts[0]), wk=Number(parts[1]);
+    return{
+      src:    dKey(r,'FINAL_SOURCE'),
+      subsrc: dKey(r,'SUB_SOURCE'),
+      prod:   dKey(r,'PRODUCT_TYPE'),
+      weekKey:yr*100+wk, weekLbl:lbl, sd:isoWkStart(yr,wk),
+      ...parseMetrics(r)
+    };
+  }).filter(r=>r.weekKey>0);
+
+  // Derive WEEKLY (totals, no breakdown) for the no-filter fast path
+  WEEKLY = aggByWeekKey(RAW_WEEK);
+}
+
+// Q3 — Full daily detail: Src x SubSrc x Prod x Date (90 days)
+function parseQ3raw(result){
+  RAW_DAILY = getRows(result).map(r=>({
+    src   : dKey(r,'FINAL_SOURCE'),
+    subsrc: dKey(r,'SUB_SOURCE'),
+    prod  : dKey(r,'PRODUCT_TYPE'),
+    lbl   : parseDateStr(r['DateTable[Date]']||r['Date']),
+    ...parseMetrics(r)
+  })).filter(r=>r.lbl&&r.leads>0);
+
+  // Derive DAILY (totals, no breakdown) for the no-filter fast path
+  DAILY = aggByDayLbl(RAW_DAILY);
+}
+
+// ════════════════════════════════════════
+//  AGGREGATION HELPERS
+// ════════════════════════════════════════
+const MKEYS=['leads','expRC','assetForm','ageReject','form1','form2','otherRed',
+             'workable','logins','assessed','approved','disbursals','disbAmt'];
+
+function emptyM(){ return Object.fromEntries(MKEYS.map(k=>[k,0])); }
+
+function aggByMonthKey(rows){
+  const m={};
+  rows.forEach(r=>{
+    if(!m[r.key]) m[r.key]={key:r.key, lbl:r.lbl, ...emptyM()};
+    MKEYS.forEach(k=>{m[r.key][k]+=(r[k]||0);});
+  });
+  return Object.values(m);
+}
+
+function aggByWeekKey(rows){
+  const m={};
+  rows.forEach(r=>{
+    const k=r.weekKey;
+    if(!m[k]) m[k]={key:k, lbl:r.weekLbl, sd:r.sd, ...emptyM()};
+    MKEYS.forEach(mk=>{m[k][mk]+=(r[mk]||0);});
+  });
+  return Object.values(m);
+}
+
+function aggByDayLbl(rows){
+  const m={};
+  rows.forEach(r=>{
+    if(!m[r.lbl]) m[r.lbl]={key:r.lbl, lbl:r.lbl, ...emptyM()};
+    MKEYS.forEach(k=>{m[r.lbl][k]+=(r[k]||0);});
+  });
+  return Object.values(m);
+}
+
+// ════════════════════════════════════════
+//  FILTER HELPERS
+// ════════════════════════════════════════
+function getDateKeys(){
+  const f=document.getElementById('fromDate').value;
+  const t=document.getElementById('toDate').value;
+  return{
+    fromStr:f, toStr:t,
+    fromKey:parseInt(f.replace(/-/g,'').slice(0,6)),
+    toKey  :parseInt(t.replace(/-/g,'').slice(0,6))
+  };
+}
+
+function getSelectedSources(){
+  const cbs=[...document.querySelectorAll('#msSrcList input')];
+  if(!cbs.length) return null;
+  const chk=cbs.filter(c=>c.checked).map(c=>c.value);
+  return chk.length===cbs.length ? null : chk;
+}
+
+function getSelectedSubSources(){
+  const cbs=[...document.querySelectorAll('#msSubList input')];
+  if(!cbs.length) return null;
+  const chk=cbs.filter(c=>c.checked).map(c=>c.value);
+  return chk.length===cbs.length ? null : chk;
+}
+
+// ════════════════════════════════════════
+//  BUILD DATA  —  ALL combinations work
+//  Every granularity supports every filter (Source, Sub-Source, Product, Date)
+// ════════════════════════════════════════
+function buildData(){
+  const {fromStr,toStr,fromKey,toKey} = getDateKeys();
+  const selSrc = getSelectedSources();
+  const selSub = getSelectedSubSources();
+  const prod   = activeProd;
+
+  // True when no dimension filter is active → use fast pre-aggregated arrays
+  const noFilter = selSrc===null && selSub===null && prod==='ALL';
+
+  // Row-level predicate applied to RAW_* arrays
+  const pass = r =>
+    (selSrc===null || selSrc.includes(r.src))   &&
+    (selSub===null || selSub.includes(r.subsrc)) &&
+    (prod==='ALL'  || r.prod===prod);
+
+  // ── MONTHLY ──────────────────────────────────────────────────────
+  if(gran==='month'){
+    if(noFilter)
+      return MONTHLY.filter(m=>m.key>=fromKey&&m.key<=toKey).sort((a,b)=>b.key-a.key);
+    return aggByMonthKey(RAW_MONTH.filter(r=>pass(r)&&r.key>=fromKey&&r.key<=toKey))
+      .sort((a,b)=>b.key-a.key);
+  }
+
+  // ── WEEKLY ───────────────────────────────────────────────────────
+  if(gran==='week'){
+    const inRange = r => {
+      const we = new Date(r.sd.getTime()+6*864e5);
+      return r.sd<=new Date(toStr+'T23:59:59') && we>=new Date(fromStr+'T00:00:00');
+    };
+    if(noFilter) return WEEKLY.filter(inRange).sort((a,b)=>b.key-a.key);
+    return aggByWeekKey(RAW_WEEK.filter(r=>pass(r)&&inRange(r))).sort((a,b)=>b.key-a.key);
+  }
+
+  // ── DAILY ────────────────────────────────────────────────────────
+  if(noFilter)
+    return DAILY.filter(d=>d.lbl>=fromStr&&d.lbl<=toStr).sort((a,b)=>a.lbl>b.lbl?-1:1);
+  return aggByDayLbl(RAW_DAILY.filter(r=>pass(r)&&r.lbl>=fromStr&&r.lbl<=toStr))
+    .sort((a,b)=>a.lbl>b.lbl?-1:1);
+}
+
+// ════════════════════════════════════════
+//  RENDER FUNNEL
+// ════════════════════════════════════════
+function renderFunnel(){
+  const D      = filteredData;
+  const note   = document.getElementById('colNote');
+  const fnDiv  = document.getElementById('filterNote');
+  const selSrc = getSelectedSources();
+  const selSub = getSelectedSubSources();
+  const noFilter = selSrc===null && selSub===null && activeProd==='ALL';
+
+  // Helpful status note (use innerHTML so emoji/entities render correctly)
+  if(gran==='week' && !WEEKLY.length)
+    note.innerHTML = '&#x23F3; Weekly data loading — please wait...';
+  else if(gran==='day' && !DAILY.length)
+    note.innerHTML = '&#x23F3; Daily data loading — please wait...';
+  else if(!noFilter && gran==='week' && !RAW_WEEK.length)
+    note.innerHTML = '&#x23F3; Weekly filter data still loading...';
+  else if(!noFilter && gran==='month' && !RAW_MONTH.length)
+    note.innerHTML = '&#x23F3; Filter data still loading...';
+  else if(!noFilter && gran==='day' && !RAW_DAILY.length)
+    note.innerHTML = '&#x23F3; Daily filter data still loading...';
+  else if(gran==='day')
+    note.innerHTML = '&#x1F4C5; Daily view: last 90 days';
+  else
+    note.innerHTML = '';
+
+  fnDiv.innerHTML = '';
+
+  // If no data yet (still loading), show a placeholder message
+  if(!D.length){
+    const msg = (gran==='week'&&!WEEKLY.length)||(gran==='day'&&!DAILY.length)
+      ? '&#x23F3; Data is loading in the background — please wait a moment, then it will appear automatically.'
+      : 'No data found for the selected filters and date range.';
+    document.getElementById('fTable').innerHTML=`<tbody><tr><td style="padding:20px;color:var(--mut);font-size:11px;text-align:center;">${msg}</td></tr></tbody>`;
+    return;
+  }
+
+  // Table header — abbreviate YYYY-MM-DD to MM-DD for daily columns
+  const isDate = d => /^\d{4}-\d{2}-\d{2}$/.test(d.lbl);
+  let html = '<thead><tr><th class="lh">Metric</th>';
+  D.forEach(d=>{ html+=`<th>${isDate(d)?d.lbl.slice(5):d.lbl}</th>`; });
+  html += '</tr></thead><tbody>';
+
+  ROWS.forEach(row=>{
+    const vals  = D.map(d=>row.get(d));
+    const pvals = row.pget ? D.map(d=>row.pget(d)) : null;
+    html += `<tr><td class="lc${row.ind?' ind':''}">${row.lbl}</td>`;
+    vals.forEach((v,i)=>{
+      const cls = cf(vals,i,row.lb);
+      html += `<td class="${cls}"><span class="vl">${row.fmt(v)}</span>`;
+      if(pvals && pvals[i]!=null && !isNaN(pvals[i]))
+        html += `<span class="pl">${row.pfmt(pvals[i])}</span>`;
+      html += '</td>';
+    });
+    html += '</tr>';
+  });
+  html += '</tbody>';
+  document.getElementById('fTable').innerHTML = html;
+}
+
+// ════════════════════════════════════════
+//  RENDER KPI
+// ════════════════════════════════════════
+function renderKPI(){
+  const D=filteredData; if(!D.length) return;
+  const tL  = D.reduce((s,d)=>s+(d.leads||0),0);
+  const tLg = D.reduce((s,d)=>s+(d.logins||0),0);
+  const tDs = D.reduce((s,d)=>s+(d.disbursals||0),0);
+  const tAm = D.reduce((s,d)=>s+(d.disbAmt||0),0);
+  const span = D.length>1 ? `${D[D.length-1].lbl} → ${D[0].lbl}` : D[0].lbl;
+  document.getElementById('kpiRow').innerHTML=`
+    <div class="kpi">   <div class="kl">Total Leads</div>      <div class="kv">${fmtN(tL)}</div>  <div class="km">${span}</div></div>
+    <div class="kpi bl"><div class="kl">Total Logins</div>     <div class="kv">${fmtN(tLg)}</div> <div class="km">Lead→Login: ${fmtP(tL?tLg/tL:0)}</div></div>
+    <div class="kpi gr"><div class="kl">Total Disbursals</div>  <div class="kv">${fmtN(tDs)}</div> <div class="km">Lead→Disb: ${fmtP(tL?tDs/tL:0)}</div></div>
+    <div class="kpi pu"><div class="kl">Disbursal Amount</div>  <div class="kv">${fmtA(tAm)}</div> <div class="km">Avg: ${fmtA(tDs?Math.round(tAm/tDs):0)} / disb</div></div>`;
+}
+
+// ════════════════════════════════════════
+//  RENDER ALERTS
+// ════════════════════════════════════════
+function renderAlerts(){
+  const D=filteredData;
+  if(D.length<2){ document.getElementById('alertsPanel').innerHTML='<div style="font-size:10px;color:var(--mut)">Select 2+ periods for alerts</div>'; return; }
+  const last=D[0], prev=D[1];
+  const alerts=[];
+  const l2dL=last.leads?last.disbursals/last.leads:0, l2dP=prev.leads?prev.disbursals/prev.leads:0;
+  if(l2dL<l2dP*.85&&l2dP>0) alerts.push({t:'r',i:'🚨',tl:'L2D% Decline',      msg:`${fmtP(l2dL)} vs ${fmtP(l2dP)} — ${(((l2dP-l2dL)/l2dP)*100).toFixed(0)}% drop`});
+  const ep=last.leads?last.expRC/last.leads:0;
+  if(ep>.28)         alerts.push({t:'r',i:'🔴',tl:'High Experian RC%',  msg:`${fmtP(ep)} in ${last.lbl} — above 28% threshold`});
+  const ad=last.approved?last.disbursals/last.approved:0;
+  if(ad<.25&&(last.approved||0)>10) alerts.push({t:'a',i:'⚠️',tl:'Low Approval→Disb%',msg:`Only ${fmtP(ad)} in ${last.lbl}`});
+  if((last.leads||0)<(prev.leads||0)*.85) alerts.push({t:'a',i:'⚠️',tl:'Lead Volume Drop', msg:`${fmtN(last.leads)} vs ${fmtN(prev.leads)}`});
+  const la=last.logins?last.assessed/last.logins:0;
+  if(la>.78) alerts.push({t:'g',i:'✅',tl:'Strong Assessment Rate',msg:`${fmtP(la)} Login→Assessed`});
+  if((last.leads||0)>(prev.leads||0)*1.1) alerts.push({t:'g',i:'📈',tl:'Lead Growth',msg:`+${(((last.leads-prev.leads)/prev.leads)*100).toFixed(0)}% vs prior`});
+  if(!alerts.length) alerts.push({t:'g',i:'✅',tl:'All Clear',msg:'No anomalies in selected period.'});
+  document.getElementById('alertsPanel').innerHTML=alerts.map(a=>`<div class="alert a${a.t}"><span class="aico">${a.i}</span><div><span class="atitle">${a.tl}</span>${a.msg}</div></div>`).join('');
+}
+
+// ════════════════════════════════════════
+//  GRANULARITY
+// ════════════════════════════════════════
+function setGran(g,btn){
+  gran=g;
+  document.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  filteredData=buildData(); renderKPI(); renderFunnel(); renderAlerts();
+}
+
+// ════════════════════════════════════════
+//  FILTERS
+// ════════════════════════════════════════
+function applyFilters(){
+  filteredData=buildData(); renderKPI(); renderFunnel(); renderAlerts();
+}
+
+function resetFilters(){
+  if(MONTHLY.length){
+    const sorted=[...MONTHLY].sort((a,b)=>a.key-b.key);
+    const latest  = sorted[sorted.length-1];
+    const earliest= sorted[Math.max(0,sorted.length-6)];
+    document.getElementById('fromDate').value = keyToDateStr(earliest.key);
+    document.getElementById('toDate').value   = keyToDateStrEnd(latest.key);
+  }
+  gran='month';
+  document.querySelectorAll('.tb').forEach((b,i)=>b.classList.toggle('on',i===0));
+  document.querySelectorAll('#prodChips .chip').forEach((c,i)=>c.classList.toggle('on',i===0));
+  activeProd='ALL';
+  msAll('msSrcList','msSrcLbl','All Sources');
+  msAll('msSubList','msSubLbl','All Sub Sources');
+  filteredData=buildData(); renderKPI(); renderFunnel(); renderAlerts();
+}
+
+function keyToDateStr(key){
+  const yr=Math.floor(key/100), mo=key%100;
+  return `${yr}-${String(mo).padStart(2,'0')}-01`;
+}
+// Returns the LAST day of the month — used for "To" date so daily data isn't cut short
+function keyToDateStrEnd(key){
+  const yr=Math.floor(key/100), mo=key%100;
+  const lastDay=new Date(yr,mo,0).getDate(); // day 0 of next month = last day of this month
+  return `${yr}-${String(mo).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
+}
+
+// Product chips
+document.querySelectorAll('#prodChips .chip').forEach(chip=>{
+  chip.addEventListener('click',()=>{
+    document.querySelectorAll('#prodChips .chip').forEach(c=>c.classList.remove('on'));
+    chip.classList.add('on');
+    activeProd=chip.dataset.v;
+  });
+});
+
+// ════════════════════════════════════════
+//  MULTISELECT
+// ════════════════════════════════════════
+function buildMS(listId,opts){
+  document.getElementById(listId).innerHTML =
+    opts.map(o=>`<label class="msopt"><input type="checkbox" value="${o}" checked>${o}</label>`).join('');
+}
+function toggleMS(id){
+  const d=document.getElementById(id), open=d.classList.contains('open');
+  document.querySelectorAll('.msdrop.open').forEach(x=>x.classList.remove('open'));
+  if(!open) d.classList.add('open');
+}
+function msFilter(inp){
+  const q=inp.value.toLowerCase();
+  inp.nextElementSibling.querySelectorAll('.msopt').forEach(o=>{
+    o.style.display=o.textContent.toLowerCase().includes(q)?'':'none';
+  });
+}
+function msAll(lid,lbl,ph)  { document.getElementById(lid).querySelectorAll('input').forEach(c=>c.checked=true);  updateMSLabel(lid,lbl,ph); }
+function msClear(lid,lbl,ph){ document.getElementById(lid).querySelectorAll('input').forEach(c=>c.checked=false); updateMSLabel(lid,lbl,ph); }
+function updateMSLabel(lid,lbl,ph){
+  const list=document.getElementById(lid);
+  const all=list.querySelectorAll('input'), chk=list.querySelectorAll('input:checked');
+  document.getElementById(lbl).textContent = chk.length===all.length ? ph : `${chk.length} selected`;
+}
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.ms')) document.querySelectorAll('.msdrop.open').forEach(d=>d.classList.remove('open'));
+});
+document.addEventListener('change',e=>{
+  if(e.target.closest('#msSrcList')) updateMSLabel('msSrcList','msSrcLbl','All Sources');
+  if(e.target.closest('#msSubList')) updateMSLabel('msSubList','msSubLbl','All Sub Sources');
+});
+
+// ════════════════════════════════════════
+//  COLLAPSE
+// ════════════════════════════════════════
+function toggleCard(bid,cid){
+  const b=document.getElementById(bid), c=document.getElementById(cid);
+  const h=b.style.display==='none';
+  b.style.display=h?'':'none';
+  if(c) c.style.transform=h?'':'rotate(-90deg)';
+}
+
+// ════════════════════════════════════════
+//  SCREEN MANAGER
+// ════════════════════════════════════════
+function showScreen(name){
+  document.getElementById('screenLogin').style.display   = name==='login'     ?'flex':'none';
+  document.getElementById('screenLoading').style.display = name==='loading'   ?'flex':'none';
+  document.getElementById('screenDash').style.display    = name==='dashboard' ?''    :'none';
+}
+
+// ════════════════════════════════════════
+//  INIT DASHBOARD
+// ════════════════════════════════════════
+function initDashboard(){
+  if(MONTHLY.length){
+    const sorted  = [...MONTHLY].sort((a,b)=>a.key-b.key);
+    const latest  = sorted[sorted.length-1];
+    const earliest= sorted[Math.max(0,sorted.length-6)];
+    document.getElementById('fromDate').value = keyToDateStr(earliest.key);       // first of from-month
+    document.getElementById('toDate').value   = keyToDateStrEnd(latest.key);      // LAST day of to-month
+  }
+  buildMS('msSrcList',[]); // empty until Q1 loads
+  buildMS('msSubList',[]);
+  filteredData=buildData(); renderKPI(); renderFunnel(); renderAlerts();
+}
+
+// ════════════════════════════════════════
+//  BOOT
+// ════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', async()=>{
+  showScreen('login');
+  if(window.location.protocol==='file:'){
+    document.getElementById('loginErr').textContent='Opened as file:// — use GitHub Pages or VS Code Live Server';
+    return;
+  }
+  try{
+    const inst     = await ensureMSAL();
+    const accounts = inst.getAllAccounts();
+    if(accounts.length>0){ setUserTag(accounts[0]); await fetchAndRender(); }
+  }catch(e){ /* stay on login */ }
+});
+</script>
+</body>
+</html>
