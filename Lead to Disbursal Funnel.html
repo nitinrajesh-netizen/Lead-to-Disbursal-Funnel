@@ -442,19 +442,23 @@ async function fetchAndRender(){
   showScreen('loading');
   try{
     const token=await getToken();
-    document.getElementById('loadNote').textContent='Running 6 DAX queries against Power BI...';
-    const res=await fetch(API_URL,{
-      method:'POST',
-      headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
-      body:JSON.stringify({queries:QUERIES.map(q=>({query:q})),serializerSettings:{includeNulls:true}})
-    });
-    if(!res.ok){
-      const txt=await res.text();
-      throw new Error(`Power BI API error ${res.status}: ${txt.slice(0,200)}`);
-    }
-    const json=await res.json();
-    if(json.error)throw new Error(json.error.message||JSON.stringify(json.error));
-    parseAllData(json.results);
+    document.getElementById('loadNote').textContent='Running DAX queries against Power BI...';
+    // Power BI API allows only ONE query per request — run all in parallel
+    const results=await Promise.all(QUERIES.map(async(q,i)=>{
+      const res=await fetch(API_URL,{
+        method:'POST',
+        headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
+        body:JSON.stringify({queries:[{query:q}],serializerSettings:{includeNulls:true}})
+      });
+      if(!res.ok){
+        const txt=await res.text();
+        throw new Error(`Power BI API error ${res.status}: ${txt.slice(0,300)}`);
+      }
+      const json=await res.json();
+      if(json.error) throw new Error(json.error.message||JSON.stringify(json.error));
+      return json.results[0];
+    }));
+    parseAllData(results);
     initDashboard();
     showScreen('dashboard');
     const now=new Date();
